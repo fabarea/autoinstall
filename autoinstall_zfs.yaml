@@ -1,0 +1,148 @@
+#cloud-config
+version: 1
+early-commands:
+  - sudo systemctl stop ssh # during install only
+
+locale: en_US.UTF-8
+keyboard:
+  layout: us
+
+storage:
+  config:
+    # Disk configuration
+    - id: disk0
+      name: disk0
+      type: disk
+      ptable: gpt
+      preserve: true
+      grub_device: false
+      match:
+        ssd: true    
+
+    # ESP partition (EFI)
+    - id: esp
+      type: partition
+      device: disk0
+      size: 1G
+      flag: boot
+      number: 1
+      wipe: superblock
+      grub_device: true
+
+    - id: esp-format
+      type: format
+      fstype: fat32
+      volume: esp
+
+    # Boot partition
+    - id: boot
+      type: partition
+      device: disk0
+      size: 2G
+      number: 2
+
+    - id: boot-format
+      type: format
+      fstype: ext4
+      volume: boot
+
+    # Root partition for LVM
+    - id: root
+      type: partition
+      device: disk0
+      size: 80G
+      wipe: superblock
+      number: 3
+
+    # LVM Volume Group
+    - id: vgroot
+      type: lvm_volgroup
+      name: vgroot
+      devices: [root]
+
+    # LVM Logical Volume
+    - id: lvroot
+      type: lvm_partition
+      name: lvroot
+      volgroup: vgroot
+      wipe: superblock
+      size: 20G
+
+    # LUKS encryption
+    - id: luroot
+      type: dm_crypt
+      dm_name: luroot
+      volume: lvroot
+      key: temporarypassword
+
+    # Format LUKS volume
+    - id: luroot-format
+      type: format
+      fstype: ext4
+      volume: luroot
+
+    # ZFS partition
+    - id: pool_part
+      type: partition
+      device: disk0
+      size: -1
+      number: 4
+
+    # ZFS pool configuration
+    - id: pool
+      type: zpool
+      pool: pool
+      vdevs: [pool_part]
+      mountpoint: /pool
+      pool_properties:
+        version: null
+        ashift: 12
+        autotrim: "on"
+      fs_properties:
+        acltype: posixacl
+        xattr: sa
+        compression: lz4
+        normalization: formD
+        relatime: "on"
+
+    # ZFS home dataset
+    - id: home
+      type: zfs
+      pool: pool
+      volume: home
+      properties:
+        mountpoint: /home
+
+    # Mount points
+    - id: luroot-mount
+      type: mount
+      device: luroot-format
+      path: /
+
+    - id: boot-mount
+      type: mount
+      device: boot-format
+      path: /boot
+
+    - id: esp-mount
+      type: mount
+      device: esp-format
+      path: /boot/efi
+
+identity:
+  hostname: ubuntu
+  username: ubuntu
+  password: "$6$examplehash$Ga.TdB4XHHv.SqWWzXoAp8Rd0zRqHwwgDx0ZJpkhJgRdwq/IQR7xHb.lEG9UGQPzw8THqTL/kFHGJj5YEGr0e1" # Change this!
+
+ssh:
+  install-server: true
+  allow-pw: true
+
+packages:
+  - zfsutils-linux
+  - cryptsetup
+  - lvm2
+
+user-data:
+  disable_root: true
+  timezone: UTC 

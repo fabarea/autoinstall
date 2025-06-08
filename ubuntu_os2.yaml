@@ -1,0 +1,60 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: ubuntu-server2
+    username: fabien
+    password: "$6$Xr1L9mny6M2nFh6x$nxKuvLPZYUs.kKTlfjqEJ6zRO4PUm.Y6tdbhO/6GBOdvG1Tm8hCYYIjX.HuOUCq2Obcz7kqS6DxmsY3eLD2bt0"
+  locale: fr_CH
+  keyboard:
+    layout: fr
+    variant: ''
+  timezone: Europe/Zurich
+
+  storage:
+    config:
+      - type: disk
+        id: disk0
+        match:
+          size: largest
+        ptable: gpt
+        wipe: false     # Ne pas effacer la table de partitions existante
+
+      # On ne touche pas à la partition /boot, on la laisse intacte
+
+      # La partition chiffrée LUKS existe déjà, on l'utilise pour le VG
+
+      - type: luks
+        id: luks0
+        device: /dev/sdXn    # Remplacer par la partition chiffrée existante (ex: /dev/sda3)
+        passphrase: "change_moi_123!"
+
+      - type: lvm_volgroup
+        id: vg0
+        name: vg0
+        devices:
+          - luks0
+
+      - type: lvm_logical_volume
+        id: lv-os2
+        name: lv_os2
+        volgroup: vg0
+        size: 100000000000  # 100 Go
+
+      - type: format
+        id: root-format
+        volume: lv-os2
+        fstype: btrfs
+
+      - type: mount
+        id: root-mount
+        device: root-format
+        path: /
+
+  packages:
+    - openssh-server
+    - btrfs-progs
+
+  late-commands:
+    - curtin in-target -- apt update
+    - curtin in-target -- apt install -y htop

@@ -1,0 +1,28 @@
+autoinstall:
+  version: 1
+  packages:
+    - ubuntu-desktop
+    - openssh-server
+    - btrfs-progs
+  identity:
+    username: fabien
+    password: '$6$VLK2/gjbgwBpot2/$WrxrY411YA/ONcDJXhnOKFgcmWis96/47dq0K.eUqpfK4NCaAb/AeSVQ4gUW07npM./a4rPJRXJ3MwKmicGN9/'
+    hostname: fabien
+  locale: en_CH.UTF-8
+  keyboard:
+    layout: ch
+    variant: fr
+  timezone: Europe/Zurich
+  # Disable SSH root login and start the ufw firewall automatically
+  debconf-selections: |
+    openssh-server openssh-server/permit-root-login boolean false
+    ufw ufw/enable boolean true
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: scaled
+      password: fabien
+  user-data:
+    users:
+      - name: ubuntu
+        passwd: '$6$2j.DxsKhBW1hGZt0$Ea2gDVN.wghEn3by8OoxQxhOLhyx3MVbYvvf0fmTgXys2LXUBlpvf43J32UEkz6ELpCA4PqusOAxaN2XRZ3xl0'

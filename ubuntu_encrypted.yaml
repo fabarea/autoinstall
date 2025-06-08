@@ -1,0 +1,76 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: ubuntu-server
+    username: fabien
+    password: "$6$Xr1L9mny6M2nFh6x$nxKuvLPZYUs.kKTlfjqEJ6zRO4PUm.Y6tdbhO/6GBOdvG1Tm8hCYYIjX.HuOUCq2Obcz7kqS6DxmsY3eLD2bt0"
+  locale: fr_CH
+  keyboard:
+    layout: fr
+    variant: ''
+  timezone: Europe/Zurich
+  storage:
+    config:
+      - type: disk
+        id: disk0
+        match:
+          size: largest
+        ptable: gpt
+        wipe: superblock-recursive
+
+      - type: partition
+        id: boot-part
+        device: disk0
+        size: 512000000
+        flag: boot
+
+      - type: format
+        id: boot-format
+        volume: boot-part
+        fstype: ext4
+
+      - type: mount
+        id: boot-mount
+        device: boot-format
+        path: /boot
+
+      - type: partition
+        id: luks-part
+        device: disk0
+        size: -1
+
+      - type: luks
+        id: luks0
+        device: luks-part
+        passphrase: "change_moi_123!"
+
+      - type: lvm_volgroup
+        id: vg0
+        name: vg0
+        devices:
+          - luks0
+
+      - type: lvm_logical_volume
+        id: lv-os1
+        name: lv_os1
+        volgroup: vg0
+        size: 100000000000
+
+      - type: format
+        id: root-format
+        volume: lv-os1
+        fstype: btrfs
+
+      - type: mount
+        id: root-mount
+        device: root-format
+        path: /
+
+  packages:
+    - openssh-server
+    - btrfs-progs
+
+  late-commands:
+    - curtin in-target -- apt update
+    - curtin in-target -- apt install -y htop
